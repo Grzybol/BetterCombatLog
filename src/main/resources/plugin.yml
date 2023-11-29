@@ -1,0 +1,4 @@
+name: BetterCombatLog
+version: '${project.version}'
+main: betterbox.bettercombatlog.BetterCombatLog
+api-version: '1.18'
