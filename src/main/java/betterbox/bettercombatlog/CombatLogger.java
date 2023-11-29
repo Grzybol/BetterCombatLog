@@ -18,18 +18,20 @@ public class CombatLogger {
     public CombatLogger(BetterCombatLog plugin,PluginLogger pluginLogger) {
         pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger called");
         this.pluginLogger =pluginLogger;
+        pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger: creating logs folder");
+        // Utwórz folder pluginu, jeśli nie istnieje
+        File pluginFolder = new File(plugin.getDataFolder(), "logs");
+        if (!pluginFolder.exists()) {
+            pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger logs folder created");
+            pluginFolder.mkdirs();
+        }
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd_HHmmss");
+        Date date = new Date();
+        String fileName = "BetterCombatLog_"+formatter.format(date) + ".log";
+        logFile = new File(pluginFolder, fileName);
         try {
-            pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger: creating logs folder");
-            // Utwórz folder pluginu, jeśli nie istnieje
-            File pluginFolder = new File(plugin.getDataFolder(), "logs");
-            if (!pluginFolder.exists()) {
-                pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger logs folder created");
-                pluginFolder.mkdirs();
-            }
-            SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd_HHmmss");
-            Date date = new Date();
-            String fileName = "BetterCombatLog_"+formatter.format(date) + ".log";
-            logFile = new File(pluginFolder, fileName);
+
+
 
             try {
                 // Jeśli plik nie istnieje, to go utworzymy
@@ -41,10 +43,8 @@ public class CombatLogger {
             }
 
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss-SSS");
-            String fileName = pluginFolder.getPath() + File.separator + dateFormat.format(new Date()) + ".txt";
-            logWriter = new BufferedWriter(new FileWriter(fileName, true));
             pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger AC log file created.");
-        } catch (IOException e) {
+        } catch (Exception e) {
             pluginLogger.log(PluginLogger.LogLevel.ERROR,"CombatLogger: "+e.getMessage());
         }
     }
