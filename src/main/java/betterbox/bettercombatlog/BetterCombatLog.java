@@ -2,6 +2,11 @@ package betterbox.bettercombatlog;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public final class BetterCombatLog extends JavaPlugin {
 
     private PluginLogger pluginLogger;
@@ -15,11 +20,25 @@ public final class BetterCombatLog extends JavaPlugin {
             getDataFolder().mkdirs();
         }
 
-        String logFilePath = getDataFolder() + "/log.txt"; // Używając metody getDataFolder() otrzymasz folder pluginu
-        pluginLogger = new PluginLogger(logFilePath);
+        // Utwórz unikalną nazwę pliku logów z nazwą pluginu i datą
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+        String logFileName = "log_" + getDescription().getName() + "_" + dateFormat.format(new Date()) + ".txt";
+        File logFile = new File(getDataFolder(), logFileName);
+
+        // Utwórz nowy plik logów
+        try {
+            if (!logFile.exists()) {
+                logFile.createNewFile();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        pluginLogger = new PluginLogger(logFile.getPath());
         pluginLogger.log("Plugin has been enabled");
-        combatLogger = new CombatLogger(this,pluginLogger);
+        combatLogger = new CombatLogger(this, pluginLogger);
     }
+
 
 
     @Override

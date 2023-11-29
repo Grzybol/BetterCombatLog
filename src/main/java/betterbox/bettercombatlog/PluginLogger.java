@@ -11,12 +11,8 @@ public class PluginLogger {
 
     private final String logFile;
 
-    public PluginLogger(String pluginName) {
-        // Tworzenie unikalnej nazwy pliku logów na podstawie daty i nazwy pluginu
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
-        String timestamp = dateFormat.format(new Date());
-        this.logFile = "logs/" + pluginName + "_" + timestamp + ".log";
-
+    public PluginLogger(String logFile) {
+        this.logFile = logFile;
         // Sprawdzenie, czy folder istnieje, jeśli nie - stworzenie go
         File file = new File(logFile);
         File folder = file.getParentFile();
