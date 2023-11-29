@@ -1,81 +1,83 @@
 package betterbox.bettercombatlog;
 
-
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.plugin.java.JavaPlugin;
 
-public class CombatLogger {
+public class CombatLogger implements Listener {
 
-    private BufferedWriter logWriter;
-    private final File logFile;
-    private PluginLogger pluginLogger;
+    private final PluginLogger pluginLogger;
+    private final JavaPlugin plugin;
 
-    public CombatLogger(BetterCombatLog plugin,PluginLogger pluginLogger) {
-        pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger called");
-        this.pluginLogger =pluginLogger;
-        pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger: creating logs folder");
-        // Utwórz folder pluginu, jeśli nie istnieje
-        File pluginFolder = new File(plugin.getDataFolder(), "logs");
-        if (!pluginFolder.exists()) {
-            pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger logs folder created");
-            pluginFolder.mkdirs();
+    public CombatLogger(JavaPlugin plugin, PluginLogger pluginLogger) {
+        this.plugin = plugin;
+        this.pluginLogger = pluginLogger;
+        this.plugin.getServer().getPluginManager().registerEvents(this, plugin);
+    }
+
+    @EventHandler
+    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        // Sprawdź, czy obrażenia pochodzą od gracza i skierowane są na gracza
+        if (event.getDamager() instanceof Player && event.getEntity() instanceof Player) {
+            Player attacker = (Player) event.getDamager();
+            Player victim = (Player) event.getEntity();
+
+            double attackSpeed = attacker.getAttribute(org.bukkit.attribute.Attribute.GENERIC_ATTACK_SPEED).getValue();
+            double victimHealthBefore = victim.getHealth(); // Punkty życia ofiary przed obrażeniem
+
+            // Wykonaj obrażenia
+            double damage = event.getFinalDamage();
+            victim.damage(damage);
+
+            double victimHealthAfter = victim.getHealth(); // Punkty życia ofiary po obrażeniu
+            Location attackerLocation = attacker.getLocation();
+            Location victimLocation = victim.getLocation();
+            double distance = attackerLocation.distance(victimLocation);
+            int attackerPing = getPlayerPing(attacker);
+            int victimPing = getPlayerPing(victim);
+
+            String logMessage = String.format("Attacker: %s, Attack Speed: %f, Victim: %s, Victim Health Before: %f, Victim Health After: %f, Attacker Ping: %d, Victim Ping: %d, Distance: %f",
+                    attacker.getName(), attackSpeed, victim.getName(), victimHealthBefore, victimHealthAfter, attackerPing, victimPing, distance);
+
+            // Dodaj prefix "[ALERT]" jeśli dystans między graczami jest większy niż 5 bloków
+            if (distance > 5) {
+                logMessage = "[ALERT] " + logMessage;
+            }
+
+            pluginLogger.log(logMessage);
+        } else {
+            pluginLogger.log("Either damager or entity is not a player");
         }
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd_HHmmss");
-        Date date = new Date();
-        String fileName = "BetterCombatLog_"+formatter.format(date) + ".log";
-        logFile = new File(pluginFolder, fileName);
+    }
+
+    private int getPlayerPing(Player player) {
+        // Pobieranie ping gracza za pomocą bukkit api
+        int ping = 0; // Domyślna wartość
+
         try {
-
-
-
-            try {
-                // Jeśli plik nie istnieje, to go utworzymy
-                if (!logFile.exists()) {
-                    logFile.createNewFile();
-                }
-            } catch (IOException e) {
-                plugin.getLogger().severe("PluginLogger: Could not create log file! "+e.getMessage());
-            }
-
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss-SSS");
-            pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger AC log file created.");
+            Object entityPlayer = player.getClass().getMethod("getHandle").invoke(player);
+            Object connection = entityPlayer.getClass().getField("playerConnection").get(entityPlayer);
+            Object networkManager = connection.getClass().getField("networkManager").get(connection);
+            ping = (int) networkManager.getClass().getMethod("getPing").invoke(networkManager);
         } catch (Exception e) {
-            pluginLogger.log(PluginLogger.LogLevel.ERROR,"CombatLogger: "+e.getMessage());
         }
+        return ping;
     }
 
-    public void logCombatEvent(Player attacker, Player victim, double victimHPBefore, double victimHPAfter,
-                               int attackerPing, int victimPing, double distance) {
-        pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger: logCombatEvent called with parameters |attacker: "+attacker.getName()+"|victim: "+victim.getName()+"|victimHPBefore: "+victimHPBefore+"|victimHPAfter: "+victimHPAfter+"|attackerPing: "+attackerPing+"|victimPing: "+victimPing+"|distance: "+distance);
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(logFile, true))) {
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-            String timestamp = dateFormat.format(new Date());
 
-            String alert = (distance > 5.0) ? "[ALERT] " : "";
+    @EventHandler
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        Player player = event.getEntity();
+        Player killer = player.getKiller();
 
-            String logMessage = String.format("%s%s - Attacker: %s, Victim: %s, Victim HP: %.2f -> %.2f, " +
-                            "Attacker Ping: %d, Victim Ping: %d, Distance: %.2f",
-                    alert, timestamp, attacker.getName(), victim.getName(), victimHPBefore, victimHPAfter,
-                    attackerPing, victimPing, distance);
-            writer.write(logMessage);
-            writer.newLine();
-        } catch (IOException e) {
-            pluginLogger.log(PluginLogger.LogLevel.ERROR,"CombatLogger: logCombatEvent"+e.getMessage());
-        }
-    }
-
-    public void close() {
-        if (logWriter != null) {
-            try {
-                logWriter.close();
-            } catch (IOException e) {
-                pluginLogger.log(PluginLogger.LogLevel.ERROR,"CombatLogger: close "+e.getMessage());
-            }
+        if (killer != null) {
+            String logMessage = String.format("Player %s was killed by %s", player.getName(), killer.getName());
+            pluginLogger.log(logMessage);
         }
     }
 }
