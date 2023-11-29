@@ -1,6 +1,6 @@
 package betterbox.bettercombatlog;
 
-import jdk.tools.jlink.plugin.Plugin;
+
 import org.bukkit.entity.Player;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -25,6 +25,19 @@ public class CombatLogger {
             if (!pluginFolder.exists()) {
                 pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger logs folder created");
                 pluginFolder.mkdirs();
+            }
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd_HHmmss");
+            Date date = new Date();
+            String fileName = "BetterCombatLog_"+formatter.format(date) + ".log";
+            logFile = new File(pluginFolder, fileName);
+
+            try {
+                // Jeśli plik nie istnieje, to go utworzymy
+                if (!logFile.exists()) {
+                    logFile.createNewFile();
+                }
+            } catch (IOException e) {
+                plugin.getLogger().severe("PluginLogger: Could not create log file! "+e.getMessage());
             }
 
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss-SSS");
