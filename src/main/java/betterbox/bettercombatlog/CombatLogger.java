@@ -1,5 +1,6 @@
 package betterbox.bettercombatlog;
 
+import jdk.tools.jlink.plugin.Plugin;
 import org.bukkit.entity.Player;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -11,26 +12,34 @@ import java.util.Date;
 public class CombatLogger {
 
     private BufferedWriter logWriter;
+    private final File logFile;
+    private PluginLogger pluginLogger;
 
-    public CombatLogger(BetterCombatLog plugin) {
+    public CombatLogger(BetterCombatLog plugin,PluginLogger pluginLogger) {
+        pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger called");
+        this.pluginLogger =pluginLogger;
         try {
+            pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger: creating logs folder");
             // Utwórz folder pluginu, jeśli nie istnieje
             File pluginFolder = new File(plugin.getDataFolder(), "logs");
             if (!pluginFolder.exists()) {
+                pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger logs folder created");
                 pluginFolder.mkdirs();
             }
 
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss-SSS");
             String fileName = pluginFolder.getPath() + File.separator + dateFormat.format(new Date()) + ".txt";
             logWriter = new BufferedWriter(new FileWriter(fileName, true));
+            pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger AC log file created.");
         } catch (IOException e) {
-            e.printStackTrace();
+            pluginLogger.log(PluginLogger.LogLevel.ERROR,"CombatLogger: "+e.getMessage());
         }
     }
 
     public void logCombatEvent(Player attacker, Player victim, double victimHPBefore, double victimHPAfter,
                                int attackerPing, int victimPing, double distance) {
-        try {
+        pluginLogger.log(PluginLogger.LogLevel.DEBUG,"CombatLogger: logCombatEvent called with parameters |attacker: "+attacker.getName()+"|victim: "+victim.getName()+"|victimHPBefore: "+victimHPBefore+"|victimHPAfter: "+victimHPAfter+"|attackerPing: "+attackerPing+"|victimPing: "+victimPing+"|distance: "+distance);
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(logFile, true))) {
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
             String timestamp = dateFormat.format(new Date());
 
@@ -40,12 +49,10 @@ public class CombatLogger {
                             "Attacker Ping: %d, Victim Ping: %d, Distance: %.2f",
                     alert, timestamp, attacker.getName(), victim.getName(), victimHPBefore, victimHPAfter,
                     attackerPing, victimPing, distance);
-
-            logWriter.write(logMessage);
-            logWriter.newLine();
-            logWriter.flush();
+            writer.write(logMessage);
+            writer.newLine();
         } catch (IOException e) {
-            e.printStackTrace();
+            pluginLogger.log(PluginLogger.LogLevel.ERROR,"CombatLogger: logCombatEvent"+e.getMessage());
         }
     }
 
@@ -54,7 +61,7 @@ public class CombatLogger {
             try {
                 logWriter.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                pluginLogger.log(PluginLogger.LogLevel.ERROR,"CombatLogger: close "+e.getMessage());
             }
         }
     }
